@@ -45,24 +45,42 @@ trap cleanup EXIT
 
 docker network create "$NETWORK" >/dev/null
 
+# Linux containers cannot reach a host port bound only to loopback. Publish a
+# second listener on this test's private bridge gateway, never on a LAN address.
+HOST_GATEWAY=host-gateway
+if [ "$(uname -s)" = Linux ]; then
+  HOST_GATEWAY="$(docker network inspect "$NETWORK" --format '{{(index .IPAM.Config 0).Gateway}}')"
+fi
+
+port_bindings() {
+  PORT_ARGS=(-p "127.0.0.1:$1:$2")
+  if [ "$HOST_GATEWAY" != host-gateway ]; then
+    PORT_ARGS+=(-p "$HOST_GATEWAY:$1:$2")
+  fi
+}
+
+port_bindings "$R1_PORT" 6379
+
 docker run -d --name "$R1" --network "$NETWORK" \
-  --add-host=host.docker.internal:host-gateway \
-  -p "127.0.0.1:${R1_PORT}:6379" \
+  --add-host="host.docker.internal:$HOST_GATEWAY" \
+  "${PORT_ARGS[@]}" \
   "$REDIS_IMAGE" \
   redis-server --port 6379 --save "" --appendonly no \
   --replica-announce-ip host.docker.internal --replica-announce-port "$R1_PORT" >/dev/null
 
+port_bindings "$R2_PORT" 6379
 docker run -d --name "$R2" --network "$NETWORK" \
-  --add-host=host.docker.internal:host-gateway \
-  -p "127.0.0.1:${R2_PORT}:6379" \
+  --add-host="host.docker.internal:$HOST_GATEWAY" \
+  "${PORT_ARGS[@]}" \
   "$REDIS_IMAGE" \
   redis-server --port 6379 --save "" --appendonly no \
   --replicaof host.docker.internal "$R1_PORT" \
   --replica-announce-ip host.docker.internal --replica-announce-port "$R2_PORT" >/dev/null
 
+port_bindings "$R3_PORT" 6379
 docker run -d --name "$R3" --network "$NETWORK" \
-  --add-host=host.docker.internal:host-gateway \
-  -p "127.0.0.1:${R3_PORT}:6379" \
+  --add-host="host.docker.internal:$HOST_GATEWAY" \
+  "${PORT_ARGS[@]}" \
   "$REDIS_IMAGE" \
   redis-server --port 6379 --save "" --appendonly no \
   --replicaof host.docker.internal "$R1_PORT" \
@@ -72,9 +90,10 @@ start_sentinel() {
   local name="$1"
   local port="$2"
 
+  port_bindings "$port" 26379
   docker run -d --name "$name" --network "$NETWORK" \
-    --add-host=host.docker.internal:host-gateway \
-    -p "127.0.0.1:${port}:26379" \
+    --add-host="host.docker.internal:$HOST_GATEWAY" \
+    "${PORT_ARGS[@]}" \
     "$REDIS_IMAGE" \
     sh -c "cat >/tmp/sentinel.conf <<EOF
 port 26379
