@@ -112,6 +112,38 @@ defmodule MirrorNeuron.Runtime.RunnerResourcesTest do
     assert request.submission_id == ""
   end
 
+  test "terminal model cleanup uses only the physical run identity" do
+    assert :ok = RunnerResources.release_run_models("physical-run")
+    assert_receive {:native_resource_cleanup, request}
+    assert request["operation"] == "release_run_models"
+    assert request["run_id"] == "physical-run"
+    refute Map.has_key?(request, "job_id")
+  end
+
+  test "unload failure does not prevent cleanup of other native resources" do
+    parent = self()
+
+    Application.put_env(
+      :mirror_neuron,
+      :native_sdk_grpc_native_resource_client,
+      fn _target, request, _timeout ->
+        attrs = Jason.decode!(request.resource_json)
+        send(parent, {:cleanup_operation, attrs["operation"]})
+        errors = if attrs["operation"] == "release_run_models", do: ["model busy"], else: []
+
+        {:ok,
+         %SetResourceResponse{
+           resource_json: Jason.encode!(%{"removed_count" => 0, "errors" => errors}),
+           version: 1
+         }}
+      end
+    )
+
+    assert {:ok, _result} = RunnerResources.cleanup_native_resources_with_result("run-busy")
+    assert_receive {:cleanup_operation, "release_run_models"}
+    assert_receive {:cleanup_operation, "cleanup"}
+  end
+
   test "unified cleanup uses the native resource registry boundary" do
     assert :ok = RunnerResources.cleanup_native_resources("run-native")
 

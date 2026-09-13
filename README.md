@@ -34,6 +34,23 @@ MirrorNeuron ecosystem.
 > MirrorNeuron is in alpha. APIs, manifests, release artifacts, and ecosystem
 > components may change between releases.
 
+## Managed model residency
+
+Managed DMR models are retained by physical run identity on the native owner node.
+Completion, failure, cancellation and deletion release those references. The last
+reference invokes `docker model unload <model>` after active requests drain;
+downloaded weights, configuration and installed-model ownership remain intact.
+Concurrent runs (including runs of the same definition) keep independent
+references. Paused runs retain their models. SDK-managed gateway requests also
+retain the actual serving owner, including fallback routes.
+
+Terminal run markers reject late preparation or requests. Failed unloads retain
+retryable ownership records; the native resource reconciler retries when Core
+confirms a terminal run, and preserves ambiguous ownership. Existing untracked
+or interactive models are not automatically swept. Workers, native SDK/gateway,
+and Core must be upgraded together for automatic terminal cleanup; changing
+source does not update an installed binary runtime.
+
 ## Contents
 
 - [Why MirrorNeuron Core exists](#why-mirrorneuron-core-exists)

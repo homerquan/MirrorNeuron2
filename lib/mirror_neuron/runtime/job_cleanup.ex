@@ -28,7 +28,14 @@ defmodule MirrorNeuron.Runtime.JobCleanup do
   end
 
   def cleanup_sandboxes(job_id, job, agents) when is_list(agents) do
-    cleanup(job_id, job, agents, @sandbox_resources)
+    resources =
+      if detail(job, "status") in ["completed", "failed", "cancelled", "deleted"] do
+        @sandbox_resources ++ [{RunnerResources, :release_run_models, "model residency"}]
+      else
+        @sandbox_resources
+      end
+
+    cleanup(job_id, job, agents, resources)
   end
 
   defp cleanup(job_id, job, agents, resources) do
@@ -109,6 +116,7 @@ defmodule MirrorNeuron.Runtime.JobCleanup do
   defp detail(map, key) when is_map(map), do: Map.get(map, key) || Map.get(map, safe_atom(key))
   defp detail(_other, _key), do: nil
 
+  defp safe_atom("status"), do: :status
   defp safe_atom("scheduler"), do: :scheduler
   defp safe_atom("placements"), do: :placements
   defp safe_atom("node"), do: :node

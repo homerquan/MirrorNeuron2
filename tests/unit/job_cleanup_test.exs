@@ -127,4 +127,22 @@ defmodule MirrorNeuron.Runtime.JobCleanupTest do
 
     refute_receive {:cleanup_rpc, _node, _module, _function, _args, _timeout}
   end
+
+  test "terminal sandbox cleanup releases model residency on every owner" do
+    for status <- ["completed", "failed", "cancelled", "deleted"] do
+      NodeAdapterStub.reset(self())
+      assert :ok = JobCleanup.cleanup_sandboxes("physical-run", %{"status" => status}, [])
+
+      for node <- [:control@lab, :connected@lab] do
+        assert_receive {:cleanup_rpc, ^node, RunnerResources, :release_run_models,
+                        ["physical-run"], 15_000}
+      end
+    end
+  end
+
+  test "paused runs retain model residency" do
+    NodeAdapterStub.reset(self())
+    assert :ok = JobCleanup.cleanup_sandboxes("paused-run", %{status: "paused"}, [])
+    refute_receive {:cleanup_rpc, _, RunnerResources, :release_run_models, _, _}
+  end
 end
