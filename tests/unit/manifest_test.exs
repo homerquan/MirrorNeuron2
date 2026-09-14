@@ -1048,6 +1048,26 @@ defmodule MirrorNeuron.ManifestTest do
     assert {:ok, manifest} = Manifest.load(base)
     assert manifest.response_service["agent"]["kind"] == "bounded_mcp"
 
+    description_path = [
+      "response_service",
+      "agent",
+      "tools",
+      "user",
+      "navigate_to_zone",
+      "description"
+    ]
+
+    described = put_in(base, description_path, "Move to the requested zone.")
+    assert {:ok, described_manifest} = Manifest.load(described)
+
+    assert get_in(Manifest.to_map(described_manifest), description_path) ==
+             "Move to the requested zone."
+
+    for invalid <- [nil, 42, %{}, "", " ", String.duplicate("x", 1201)] do
+      assert {:error, errors} = Manifest.load(put_in(base, description_path, invalid))
+      assert Enum.any?(errors, &String.contains?(&1, "tool descriptions"))
+    end
+
     with_preflight =
       put_in(
         base,

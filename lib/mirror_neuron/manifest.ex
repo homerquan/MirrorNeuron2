@@ -838,7 +838,7 @@ defmodule MirrorNeuron.Manifest do
 
   defp validate_response_agent_tools(tools, user?) do
     Enum.flat_map(tools, fn {name, specification} ->
-      allowed = if user?, do: ~w(arguments effect), else: ~w(arguments)
+      allowed = if user?, do: ~w(arguments effect description), else: ~w(arguments description)
 
       arguments =
         if is_map(specification) and is_map(specification["arguments"]),
@@ -851,16 +851,30 @@ defmodule MirrorNeuron.Manifest do
         "response_service.agent tool names must be non-empty strings"
       )
       |> maybe_add_error(
-        not is_map(specification) or Map.keys(specification) -- allowed != [] or is_nil(arguments),
+        not is_map(specification) or Map.keys(specification) -- allowed != [] or
+          is_nil(arguments),
         "response_service.agent tool declarations have invalid fields"
       )
       |> maybe_add_error(
-        user? and is_map(specification) and not safe_contract_identifier?(specification["effect"]),
+        user? and is_map(specification) and
+          not safe_contract_identifier?(specification["effect"]),
         "response_service.agent user tool effects must be safe lowercase identifiers"
+      )
+      |> maybe_add_error(
+        is_map(specification) and Map.has_key?(specification, "description") and
+          not valid_tool_description?(specification["description"]),
+        "response_service.agent tool descriptions must be non-empty strings of at most 1200 characters"
       )
       |> add_errors(validate_response_agent_arguments(arguments || %{}))
     end)
   end
+
+  defp valid_tool_description?(description) when is_binary(description) do
+    length = description |> String.trim() |> String.to_charlist() |> length()
+    length in 1..1200
+  end
+
+  defp valid_tool_description?(_description), do: false
 
   defp validate_response_agent_arguments(arguments) do
     Enum.flat_map(arguments, fn {name, schema} ->

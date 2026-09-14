@@ -315,3 +315,11 @@ Please use the repository's [security reporting page](https://github.com/MirrorN
 for vulnerabilities; do not disclose them in public issues.
 
 MirrorNeuron Core is released under the [MIT License](LICENSE).
+
+## Response tool descriptions
+
+Bounded response-agent tools accept an optional non-empty `description` of at
+most 1,200 Unicode code points after trimming. Core preserves this planner
+guidance without changing effects, argument validation, or execution authority.
+Deploy this validator with the matching SDK common and job-response packages
+before loading description-bearing blueprint declarations.
