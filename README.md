@@ -16,7 +16,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/Runtime-Elixir%2FOTP-6E4A7E?style=flat-square&amp;logo=elixir&amp;logoColor=white" alt="Elixir/OTP runtime">
   <img src="https://img.shields.io/badge/State-Redis-DC382D?style=flat-square" alt="Redis-backed state">
-  <img src="https://img.shields.io/badge/Status-Alpha-F59E0B?style=flat-square" alt="Alpha status">
+  <img src="https://img.shields.io/badge/Status-Beta-F59E0B?style=flat-square" alt="Beta status">
 </p>
 
 MirrorNeuron is a runtime for AI workflows that need more than a model call:
@@ -30,7 +30,7 @@ gRPC control and observability. The CLI, Python SDK, REST API, and Web UI build
 on that engine.
 
 > [!IMPORTANT]
-> MirrorNeuron is in alpha. This README follows the current source documentation;
+> MirrorNeuron is in beta. This README follows the current source documentation;
 > installed releases may differ. Check `mn --version` and command help when
 > following a guide, and use compatible ecosystem releases.
 
